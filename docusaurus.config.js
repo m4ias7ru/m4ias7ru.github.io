@@ -74,7 +74,12 @@ const config = {
       // Replace with your project's social card
       image: 'img/social-card.png',
       colorMode: {
-        respectPrefersColorScheme: true,
+        // Force dark mode as the default
+        defaultMode: 'dark',
+        // Hide the light/dark mode switch
+        disableSwitch: true,
+        // Ignore the user's OS preference
+        respectPrefersColorScheme: false,
       },
       navbar: {
         title: 'm4ias7ru',
@@ -103,7 +108,7 @@ const config = {
         copyright: `Copyright © ${new Date().getFullYear()} Marius-Alexandru Ulmeanu`,
       },
       prism: {
-        theme: prismThemes.github,
+        theme: prismThemes.dracula,
         darkTheme: prismThemes.dracula,
       },
     }),

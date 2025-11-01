@@ -1,32 +1,73 @@
-/**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+/* We will lock the site to dark mode via docusaurus.config.js.
+ * We can put all styles in [data-theme='dark'] to ensure they apply.
  */
+[data-theme='dark'] {
+  /* COLOR PALETTE */
 
-/* You can override the default Infima variables here. */
-:root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  /* HTB Green for main brand color */
+  --ifm-color-primary: #9fef00;
+  --ifm-color-primary-dark: #8ee000;
+  --ifm-color-primary-darker: #82cd00;
+  --ifm-color-primary-darkest: #6ba900;
+  --ifm-color-primary-light: #b0ff1a;
+  --ifm-color-primary-lighter: #b8ff33;
+  --ifm-color-primary-lightest: #c8ff66;
+
+  /* GitHub Dark Charcoal background */
+  --ifm-background-color: #0d1117;
+  --ifm-background-surface-color: #0d1117;
+
+  /* Light gray for body text */
+  --ifm-font-color-base: #c0c0c0;
+
+  /* Make all links use the HTB green */
+  --ifm-link-color: var(--ifm-color-primary);
+
+  /* Make all headers use the HTB green */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--ifm-color-primary);
+  }
+
+  /* GLITCH EFFECT ON ALL HEADINGS (ON HOVER) */
+  h1:hover,
+  h2:hover,
+  h3:hover,
+  h4:hover,
+  h5:hover,
+  h6:hover {
+    animation: glitch-effect 0.4s linear infinite;
+  }
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+/* ANIMATIONS */
+
+/* Chromatic Aberration Glitch Effect */
+@keyframes glitch-effect {
+  0% {
+    text-shadow: -2px -2px 0px rgba(255, 0, 0, 0.5),
+      1px 1px 0px rgba(159, 239, 0, 0.5);
+  }
+  25% {
+    text-shadow: 2px 2px 0px rgba(255, 0, 0, 0.5),
+      -1px -1px 0px rgba(159, 239, 0, 0.5);
+  }
+  50% {
+    text-shadow: 2px -2px 0px rgba(255, 0, 0, 0.5),
+      -1px 2px 0px rgba(159, 239, 0, 0.5);
+  }
+  75% {
+    text-shadow: -2px 2px 0px rgba(255, 0, 0, 0.5),
+      2px -2px 0px rgba(159, 239, 0, 0.5);
+  }
+  100% {
+    text-shadow: -2px -2px 0px rgba(255, 0, 0, 0.5),
+      1px 1px 0px rgba(159, 239, 0, 0.5);
+  }
 }
 
 /* Hide the footer */
