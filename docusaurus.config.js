@@ -30,6 +30,12 @@ const config = {
   organizationName: 'm4ias7ru', // Usually your GitHub org/user name.
   projectName: 'm4ias7ru.github.io', // Usually your repo name.
 
+  // Specify the deployment branch
+  deploymentBranch: 'gh-pages',
+
+  // Fix the warning
+  trailingSlash: true,
+
   onBrokenLinks: 'throw',
 
   // Even if you don't use internationalization, you can use this field to set
