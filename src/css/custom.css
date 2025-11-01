@@ -87,7 +87,21 @@
   }
 }
 
-/* Hide the footer */
-.footer {
-  display: none;
-}
+/* FOOTER STYLING & ASCII ART */
+  .footer--dark {
+    /* Make footer transparent */
+    background-color: transparent;
+    border-top: 1px solid #222; /* Subtle top border */
+  }
+
+  /* This adds the ASCII art above your copyright */
+  .footer__copyright::before {
+    content: '\A  >_  \A'; /* \A is a newline */
+    white-space: pre; /* Renders newlines and spaces */
+    display: block;
+    text-align: center;
+    font-family: var(--ifm-font-family-monospace);
+    font-size: 2em;
+    color: var(--ifm-color-primary);
+    margin-bottom: 1rem;
+  }
