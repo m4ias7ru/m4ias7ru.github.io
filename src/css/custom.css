@@ -23,6 +23,23 @@
   /* Make all links use the HTB green */
   --ifm-link-color: var(--ifm-color-primary);
 
+  /* MULTI-LINE CODE BLOCKS ( ```code``` ) */
+  /* This rule applies to the large code blocks */
+  .prism-code-block {
+    background: #010101 !important;
+    border: 1px solid #333;
+  }
+
+  /* INLINE CODE STYLING ( `code` ) */
+  /* This rule styles inline code */
+  code {
+    background-color: #010101; /* Match the block background */
+    border: 1px solid #333; /* Match the block border */
+    color: var(--ifm-color-primary); /* Use HTB green for text */
+    padding: 0.1em 0.3em; /* Add a little space */
+    border-radius: 4px; /* Slightly rounded corners */
+  }
+
   /* Make all headers use the HTB green */
   h1,
   h2,

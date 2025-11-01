@@ -7,8 +7,14 @@ toc_min_heading_level: 2
 toc_max_heading_level: 6
 ---
 
+import Tag from '@site/src/components/Tag';
+
 # `m4ias7ru:~$`
 This is some heading 1 level text
+
+### Tag Component Example
+<Tag>Active Directory</Tag> <Tag>Kerberos</Tag> <Tag>Windows</Tag>
+> Writeups focused on Active Directory, Kerberos, and Windows domain compromise.
 
 ## This is a heading 2 test
 Heading 2 level text
@@ -24,6 +30,7 @@ Heading 5 level text
 
 ###### This is a heading 6 test
 Heading 6 level text with some `inline code1` and `inline code2`
+
 
 ## This is a heading 2 text (with some random code inside)
 ```py

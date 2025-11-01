@@ -1,0 +1,11 @@
+.tag {
+  background-color: #010101; /* Match code blocks */
+  border: 1px solid #333; /* Match code blocks */
+  color: var(--ifm-color-primary); /* Use HTB green */
+  font-family: var(--ifm-font-family-monospace);
+  padding: 0.2em 0.5em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  margin-right: 6px;
+  white-space: nowrap;
+}
