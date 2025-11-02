@@ -90,7 +90,6 @@ const config = {
       tableOfContents: {
         minHeadingLevel: 2,
         maxHeadingLevel: 6,
-        title: 'Table of Contents',
       },
       navbar: {
         title: 'm4ias7ru',
@@ -119,8 +118,8 @@ const config = {
         copyright: `Copyright © ${new Date().getFullYear()} Marius-Alexandru Ulmeanu`,
       },
       prism: {
-        theme: prismThemes.dracula,
-        darkTheme: prismThemes.dracula,
+        theme: prismThemes.vsDark,
+        darkTheme: prismThemes.vsDark,
       },
     }),
 };

@@ -1,6 +1,6 @@
 .tag {
-  background-color: #010101; /* Match code blocks */
-  border: 1px solid #333; /* Match code blocks */
+  background-color: #191d23; /* Match code blocks */
+  border: 1px solid #2a3443; /* Match code blocks */
   color: var(--ifm-color-primary); /* Use HTB green */
   font-family: var(--ifm-font-family-monospace);
   padding: 0.2em 0.5em;
