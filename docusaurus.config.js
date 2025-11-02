@@ -56,17 +56,19 @@ const config = {
           // Make this the default homepage
           routeBasePath: '/',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
+        // Remove the comments below to enable the blog when you need it.
+        // blog: {
+        //   showReadingTime: true,
+        //   feedOptions: {
+        //     type: ['rss', 'atom'],
+        //     xslt: true,
+        //   },
+        //   // Useful options to enforce blogging best practices
+        //   onInlineTags: 'warn',
+        //   onInlineAuthors: 'warn',
+        //   onUntruncatedBlogPosts: 'warn',
+        // },
         theme: {
           customCss: './src/css/custom.css',
         },
