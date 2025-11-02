@@ -53,6 +53,22 @@ if __name__ == "__main__":
     main()
 ```
 
+:::tip
+Tip-test
+:::
+
+:::info
+Info-test
+:::
+
+:::warning
+Warning-test
+:::
+
+:::danger
+Danger-test
+:::
+
 <!-- This site is an archive of my Hack The Box writeups and cybersecurity notes.
 
 ## Categories

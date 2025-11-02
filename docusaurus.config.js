@@ -87,6 +87,11 @@ const config = {
         // Ignore the user's OS preference
         respectPrefersColorScheme: false,
       },
+      tableOfContents: {
+        minHeadingLevel: 2,
+        maxHeadingLevel: 6,
+        title: 'Table of Contents',
+      },
       navbar: {
         title: 'm4ias7ru',
         logo: {
