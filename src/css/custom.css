@@ -91,7 +91,7 @@
   .footer--dark {
     /* Make footer transparent */
     background-color: transparent;
-    border-top: 1px solid #222; /* Subtle top border */
+    border-top: 1px solid #444950; /* Subtle top border */
   }
 
   /* This adds the ASCII art above your copyright */
