@@ -106,8 +106,8 @@ export default function Whoami() {
         await typeSuffix(setBottomChars, part3_type_suffix, 80);
         
         // --- Phase 4: Loop ---
-        // Cursor remains visible (blinking) during this pause
-        await sleep(5000); 
+        // Pause for 4200ms (3 blinks at 1.4s each)
+        await sleep(4200); 
         if (!isMounted) return;
       }
     };
