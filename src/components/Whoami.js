@@ -116,7 +116,7 @@ export default function Whoami() {
   return (
     <div className={styles.terminal}>
       <div className={styles.promptLine}>
-        <span className={styles.promptUser}>m4ias7ru@portfolio</span>
+        <span className={styles.promptUser}>m4ias7ru@localhost</span>
         <span className={styles.promptColon}>:</span>
         <span className={styles.promptPath}>~$</span>
         <span className={styles.promptCommand}> whoami</span>

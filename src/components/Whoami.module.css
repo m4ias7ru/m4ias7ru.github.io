@@ -114,9 +114,12 @@
 
 /* "Cooldown" state for 'M' */
 .capitalized {
-  composes: visible; 
-  color: var(--ifm-font-color-base);
-  transform: scale(1);
+  /* Properties inherited from the "visible" state */
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  
+  /* Cooldown properties */
+  color: var(--ifm-font-color-base); /* Back to gray */
   transition: color 0.5s ease, transform 0.5s ease;
 }
 
