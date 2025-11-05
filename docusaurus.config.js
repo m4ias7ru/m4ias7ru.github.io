@@ -98,6 +98,7 @@ const config = {
         logo: {
           alt: 'm4ias7ru',
           src: 'img/logo.svg',
+          href: '/', // This line sends users to your root homepage
         },
         // items: [
         //   {
