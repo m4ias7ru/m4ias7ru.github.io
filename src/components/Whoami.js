@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styles from './Whoami.module.css';
 
-// Helper function to pause execution
+// --- Helper: sleep function ---
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Helper function to "type" out the suffix
+// --- Helper: typing function ---
 const typeSuffix = async (setter, suffix, speed = 80) => {
   const chars = suffix.split('');
   for (let i = 0; i < chars.length; i++) {
@@ -12,11 +12,11 @@ const typeSuffix = async (setter, suffix, speed = 80) => {
       ...prev,
       { char: chars[i], index: prev.length, state: 'typed' }
     ]);
-    await sleep(speed);
+    await sleep(speed); // Typing speed
   }
 };
 
-// The main React Component
+// --- The React Component ---
 export default function Whoami() {
   const [topChars, setTopChars] = useState(
     'm4ias7ru'.split('').map((char, index) => ({ char, index, state: 'visible' }))
@@ -25,9 +25,9 @@ export default function Whoami() {
     'marius'.split('').map((char, index) => ({ char, index, state: 'hidden' }))
   );
   const [showTopLine, setShowTopLine] = useState(true);
-  const [showCursor, setShowCursor] = useState(false);
+  const [showCursor, setShowCursor] = useState(false); // Cursor state
 
-  // Maps "m4ias7ru" indexes to "marius" indexes
+  // The CORRECT map of your name.
   const nameMap = [
     { targetIndex: 0, originalIndex: 0 }, // m
     { targetIndex: 1, originalIndex: 3 }, // a
@@ -36,81 +36,73 @@ export default function Whoami() {
     { targetIndex: 4, originalIndex: 7 }, // u
     { targetIndex: 5, originalIndex: 4 }, // s
   ];
-  // "Junk" letters to be faded
   const junkIndexes = [1, 5]; // '4' and '7'
 
   useEffect(() => {
-    let isMounted = true;
-
+    // This function now runs only ONCE on page load
     const runAnimation = async () => {
-      if (!isMounted) return;
-
       const part0_initial = 'm4ias7ru';
       const part1_target = 'marius';
-      const part3_type_suffix = '-Alexandru Ulmeanu'; // Contains the space
+      const part3_type_suffix = '-Alexandru Ulmeanu';
 
-      while (isMounted) {
-        // --- Reset State ---
-        setTopChars(part0_initial.split('').map((char, index) => ({ char, index, state: 'visible' })));
-        setBottomChars(part1_target.split('').map((char, index) => ({ char, index, state: 'hidden' })));
-        setShowTopLine(true);
-        setShowCursor(false);
-        await sleep(2000); // Initial pause
+      // --- Reset State (runs once) ---
+      setTopChars(part0_initial.split('').map((char, index) => ({ char, index, state: 'visible' })));
+      setBottomChars(part1_target.split('').map((char, index) => ({ char, index, state: 'hidden' })));
+      setShowTopLine(true);
+      setShowCursor(false);
+      await sleep(2000); // Initial pause
 
-        // --- Phase 1: "Pull and Drop" Animation ---
-        for (const item of nameMap) {
-          if (!isMounted) return;
-          // 1. Highlight
-          setTopChars(prev => prev.map(c => 
-            c.index === item.originalIndex ? { ...c, state: 'pulled' } : c
-          ));
-          await sleep(300);
-          // 2. Fall away
-          if (!isMounted) return;
-          setTopChars(prev => prev.map(c => 
-            c.index === item.originalIndex ? { ...c, state: 'hidden' } : c
-          ));
-          // 3. Drop in
-          setBottomChars(prev => prev.map(c => 
-            c.index === item.targetIndex ? { ...c, state: 'visible' } : c
-          ));
-          await sleep(400);
-        }
-        
-        // --- Phase 2: Fade out junk ---
-        await sleep(1000); // Pause on "marius"
-        if (!isMounted) return;
+      // --- Phase 1: "Pull and Drop" Animation ---
+      for (const item of nameMap) {
+        // 1. Highlight
         setTopChars(prev => prev.map(c => 
-          junkIndexes.includes(c.index) ? { ...c, state: 'hidden' } : c
+          c.index === item.originalIndex ? { ...c, state: 'pulled' } : c
         ));
-        await sleep(500);
-
-        // --- Phase 3: Capitalize and Type ---
-        setShowTopLine(false); // Fade out top line
-        
-        // "Glitch" the 'm' to 'M'
-        setBottomChars(prev => prev.map((c, i) => 
-          i === 0 ? { ...c, state: 'capitalizing' } : c
+        await sleep(300);
+        // 2. Fall away
+        setTopChars(prev => prev.map(c => 
+          c.index === item.originalIndex ? { ...c, state: 'hidden' } : c
         ));
-        await sleep(100);
-        if (!isMounted) return;
-        setBottomChars(prev => prev.map((c, i) => 
-          i === 0 ? { ...c, char: 'M', state: 'capitalized' } : c
+        // 3. Drop in
+        setBottomChars(prev => prev.map(c => 
+          c.index === item.targetIndex ? { ...c, state: 'visible' } : c
         ));
-        await sleep(500); // Pause on "Marius"
-
-        // Show cursor *before* typing
-        if (!isMounted) return;
-        setShowCursor(true);
-        await typeSuffix(setBottomChars, part3_type_suffix, 80);
-        
-        // --- Phase 4: Loop ---
-        await sleep(5000); // Long pause at the end
+        await sleep(400);
       }
+      
+      // --- Phase 2: Fade out junk ---
+      await sleep(1000); // Pause on "marius"
+      setTopChars(prev => prev.map(c => 
+        junkIndexes.includes(c.index) ? { ...c, state: 'hidden' } : c
+      ));
+      await sleep(500);
+
+      // --- Phase 3: Capitalize and Type ---
+      setShowTopLine(false); // Fade out top line
+      
+      // "Glitch" the 'm' to 'M'
+      setBottomChars(prev => prev.map((c, i) => 
+        i === 0 ? { ...c, state: 'capitalizing' } : c
+      ));
+      await sleep(100);
+      setBottomChars(prev => prev.map((c, i) => 
+        i === 0 ? { ...c, char: 'M', state: 'capitalized' } : c
+      ));
+      await sleep(500); // Pause on "Marius"
+
+      // Show cursor *before* typing
+      setShowCursor(true);
+      await typeSuffix(setBottomChars, part3_type_suffix, 80);
+      
+      // --- Phase 4: END ---
+      // The animation is over. The component will now stay
+      // in this final state with the cursor blinking.
     };
 
     runAnimation();
-    return () => { isMounted = false; };
+    
+    // We remove the cleanup function and the while(isMounted) loop
+    // so the animation only runs one time.
   }, []);
 
   return (
@@ -153,6 +145,9 @@ export default function Whoami() {
             );
           })}
           
+          {/* The cursor is now permanently shown after typing,
+            so it will blink forever.
+          */}
           {showCursor && (
             <span
               className={styles.cursor}
