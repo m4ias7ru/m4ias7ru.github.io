@@ -41,82 +41,85 @@ export default function Whoami() {
 
   useEffect(() => {
     let isMounted = true;
+    let timeoutId = null; 
 
+    const part0_initial = 'm4ias7ru';
+    const part1_target = 'marius';
+    const part3_type_suffix = '-Alexandru Ulmeanu';
+
+    // This is the animation function that will call itself
     const runAnimation = async () => {
       if (!isMounted) return;
 
-      const part0_initial = 'm4ias7ru';
-      const part1_target = 'marius';
-      const part3_type_suffix = '-Alexandru Ulmeanu';
+      // --- Reset State ---
+      setTopChars(part0_initial.split('').map((char, index) => ({ char, index, state: 'visible' })));
+      setBottomChars(part1_target.split('').map((char, index) => ({ char, index, state: 'hidden' })));
+      setShowTopLine(true);
+      setShowCursor(false);
+      await sleep(2000);
+      if (!isMounted) return;
 
-      // Re-add the loop
-      while (isMounted) {
-        // --- Reset State ---
-        setTopChars(part0_initial.split('').map((char, index) => ({ char, index, state: 'visible' })));
-        setBottomChars(part1_target.split('').map((char, index) => ({ char, index, state: 'hidden' })));
-        setShowTopLine(true);
-        setShowCursor(false); // Hide cursor at the start of the loop
-        await sleep(2000); // Initial pause
-
-        // --- Phase 1: "Pull and Drop" Animation ---
-        for (const item of nameMap) {
-          if (!isMounted) return;
-          // 1. Highlight
-          setTopChars(prev => prev.map(c => 
-            c.index === item.originalIndex ? { ...c, state: 'pulled' } : c
-          ));
-          await sleep(300);
-          // 2. Fall away
-          if (!isMounted) return;
-          setTopChars(prev => prev.map(c => 
-            c.index === item.originalIndex ? { ...c, state: 'hidden' } : c
-          ));
-          // 3. Drop in
-          setBottomChars(prev => prev.map(c => 
-            c.index === item.targetIndex ? { ...c, state: 'visible' } : c
-          ));
-          await sleep(400);
-        }
-        
-        // --- Phase 2: Fade out junk ---
-        await sleep(1000); // Pause on "marius"
+      // --- Phase 1: "Pull and Drop" Animation ---
+      for (const item of nameMap) {
         if (!isMounted) return;
         setTopChars(prev => prev.map(c => 
-          junkIndexes.includes(c.index) ? { ...c, state: 'hidden' } : c
+          c.index === item.originalIndex ? { ...c, state: 'pulled' } : c
         ));
-        await sleep(500);
+        await sleep(300);
+        if (!isMounted) return;
+        setTopChars(prev => prev.map(c => 
+          c.index === item.originalIndex ? { ...c, state: 'hidden' } : c
+        ));
+        setBottomChars(prev => prev.map(c => 
+          c.index === item.targetIndex ? { ...c, state: 'visible' } : c
+        ));
+        await sleep(400);
+      }
+      
+      // --- Phase 2: Fade out junk ---
+      await sleep(1000);
+      if (!isMounted) return;
+      setTopChars(prev => prev.map(c => 
+        junkIndexes.includes(c.index) ? { ...c, state: 'hidden' } : c
+      ));
+      await sleep(500);
 
-        // --- Phase 3: Capitalize and Type ---
-        setShowTopLine(false); // Fade out top line
-        
-        // "Glitch" the 'm' to 'M'
-        setBottomChars(prev => prev.map((c, i) => 
-          i === 0 ? { ...c, state: 'capitalizing' } : c
-        ));
-        await sleep(100);
-        if (!isMounted) return;
-        setBottomChars(prev => prev.map((c, i) => 
-          i === 0 ? { ...c, char: 'M', state: 'capitalized' } : c
-        ));
-        await sleep(500); // Pause on "Marius"
+      // --- Phase 3: Capitalize and Type ---
+      setShowTopLine(false);
+      
+      setBottomChars(prev => prev.map((c, i) => 
+        i === 0 ? { ...c, state: 'capitalizing' } : c
+      ));
+      await sleep(100);
+      if (!isMounted) return;
+      setBottomChars(prev => prev.map((c, i) => 
+        i === 0 ? { ...c, char: 'M', state: 'capitalized' } : c
+      ));
+      await sleep(500);
 
-        // Show cursor *before* typing
-        if (!isMounted) return;
-        setShowCursor(true);
-        await typeSuffix(setBottomChars, part3_type_suffix, 80);
-        
-        // --- Phase 4: Loop ---
-        // Pause for 4200ms (3 blinks at 1.4s each)
-        await sleep(4200); 
-        if (!isMounted) return;
+      if (!isMounted) return;
+      setShowCursor(true);
+      await typeSuffix(setBottomChars, part3_type_suffix, 80);
+      
+      // --- Phase 4: Loop ---
+      await sleep(4200); // 3 blinks
+      
+      if (isMounted) {
+        timeoutId = setTimeout(runAnimation, 0);
       }
     };
 
+    // Start the first run
     runAnimation();
     
-    // Add the cleanup function back
-    return () => { isMounted = false; };
-  }, []);
+    // Cleanup function
+    return () => { 
+      isMounted = false; 
+      if (timeoutId) {
+        clearTimeout(timeoutId); // Clear the scheduled next loop
+      }
+    };
+  }, []); // Empty dependency array means this runs once on mount
 
   return (
     <div className={styles.terminal}>
@@ -159,9 +162,7 @@ export default function Whoami() {
           })}
           
           {showCursor && (
-            <span
-              className={styles.cursor}
-              style={{ animation: 'blink 1.4s infinite' }}>
+            <span className={styles.cursor}>
               _
             </span>
           )}
