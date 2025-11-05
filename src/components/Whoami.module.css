@@ -14,30 +14,32 @@
   font-size: 1.1em;
   line-height: 1.5;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .promptUser {
-  color: var(--ifm-color-primary); /* HTB Green */
+  color: var(--ifm-color-primary);
 }
 
 .promptColon {
-  color: var(--ifm-font-color-base); /* Light Gray */
+  color: var(--ifm-font-color-base);
 }
 
 .promptPath {
-  color: #82aaff; /* A common "path" blue */
+  color: #82aaff;
 }
 
 .promptCommand {
-  color: var(--ifm-font-color-base); /* Light Gray */
+  color: var(--ifm-font-color-base);
 }
 
-/* --- Animation Output Styles --- */
 .outputSection {
   font-size: 2em; 
   font-weight: bold;
-  height: 5em; 
-  white-space: pre; 
+  height: 6em; /* More height for mobile */
+  white-space: normal; /* Allows wrapping */
+  word-break: break-word; 
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -46,7 +48,6 @@
   overflow: hidden; 
 }
 
-/* --- Top Line ("m4ias7ru") --- */
 .topLine {
   color: var(--ifm-font-color-base);
   margin-bottom: 0.5em;
@@ -77,18 +78,22 @@
   opacity: 0.5;
 }
 
-/* --- Bottom Line ("marius-Alexandru...") --- */
 .bottomLine {
   color: var(--ifm-font-color-base);
   min-height: 1em;
   display: flex; 
   align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-wrap: wrap;
+  white-space: pre-wrap; /* Renders the space correctly */
 }
 
 .bottomChar {
   display: inline-block;
 }
 
+/* "Drop-in" animation for 'marius' */
 .bottomChar:not(.visible, .capitalizing, .capitalized, .typed) {
   opacity: 0;
   transform: translateY(-30px) scale(0.5);
@@ -99,6 +104,7 @@
   transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
 }
 
+/* "Glitch" animation for 'm' -> 'M' */
 .capitalizing {
   color: var(--ifm-color-primary);
   transform: scale(1.2);
@@ -106,13 +112,15 @@
   animation: flash 0.1s ease infinite;
 }
 
+/* "Cooldown" state for 'M' */
 .capitalized {
   composes: visible; 
-  color: var(--ifm-font-color-base); /* Back to gray */
-  transform: scale(1); /* Back to normal size */
+  color: var(--ifm-font-color-base);
+  transform: scale(1);
   transition: color 0.5s ease, transform 0.5s ease;
 }
 
+/* "Typed-in" animation for the suffix */
 .typed {
   opacity: 0;
   animation: fade-in 0.1s forwards;
@@ -131,4 +139,18 @@
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .terminal {
+    padding: 1rem;
+    min-height: 16em;
+  }
+  .promptLine {
+    font-size: 0.9em;
+  }
+  .outputSection {
+    font-size: 1.5em; 
+  }
 }

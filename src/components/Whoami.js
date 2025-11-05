@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styles from './Whoami.module.css';
 
-// --- Helper: sleep function ---
+// Helper function to pause execution
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// --- Helper: typing function ---
+// Helper function to "type" out the suffix
 const typeSuffix = async (setter, suffix, speed = 80) => {
   const chars = suffix.split('');
   for (let i = 0; i < chars.length; i++) {
@@ -12,11 +12,11 @@ const typeSuffix = async (setter, suffix, speed = 80) => {
       ...prev,
       { char: chars[i], index: prev.length, state: 'typed' }
     ]);
-    await sleep(speed); // Typing speed
+    await sleep(speed);
   }
 };
 
-// --- The React Component ---
+// The main React Component
 export default function Whoami() {
   const [topChars, setTopChars] = useState(
     'm4ias7ru'.split('').map((char, index) => ({ char, index, state: 'visible' }))
@@ -25,9 +25,9 @@ export default function Whoami() {
     'marius'.split('').map((char, index) => ({ char, index, state: 'hidden' }))
   );
   const [showTopLine, setShowTopLine] = useState(true);
-  const [showCursor, setShowCursor] = useState(false); // Cursor state
+  const [showCursor, setShowCursor] = useState(false);
 
-  // The CORRECT map of your name.
+  // Maps "m4ias7ru" indexes to "marius" indexes
   const nameMap = [
     { targetIndex: 0, originalIndex: 0 }, // m
     { targetIndex: 1, originalIndex: 3 }, // a
@@ -36,6 +36,7 @@ export default function Whoami() {
     { targetIndex: 4, originalIndex: 7 }, // u
     { targetIndex: 5, originalIndex: 4 }, // s
   ];
+  // "Junk" letters to be faded
   const junkIndexes = [1, 5]; // '4' and '7'
 
   useEffect(() => {
@@ -46,14 +47,14 @@ export default function Whoami() {
 
       const part0_initial = 'm4ias7ru';
       const part1_target = 'marius';
-      const part3_type_suffix = '-Alexandru Ulmeanu';
+      const part3_type_suffix = '-Alexandru Ulmeanu'; // Contains the space
 
       while (isMounted) {
         // --- Reset State ---
         setTopChars(part0_initial.split('').map((char, index) => ({ char, index, state: 'visible' })));
         setBottomChars(part1_target.split('').map((char, index) => ({ char, index, state: 'hidden' })));
         setShowTopLine(true);
-        setShowCursor(false); // Hide cursor on loop
+        setShowCursor(false);
         await sleep(2000); // Initial pause
 
         // --- Phase 1: "Pull and Drop" Animation ---

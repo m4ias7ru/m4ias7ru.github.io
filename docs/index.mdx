@@ -5,15 +5,22 @@ sidebar_label: Home
 ---
 
 import Whoami from '@site/src/components/Whoami';
+import styles from './index.module.css';
 
-<div style={{display: 'flex', justifyContent: 'center'}}>
+<div className={styles.homepageContainer}>
+  
   <Whoami />
+  
+  <div className={styles.introText}>
+    <p>
+      This site is an archive of my Hack The Box writeups and cybersecurity notes.
+    </p>
+    <p>
+      My primary focus is on penetration testing and vulnerability research,
+      using platforms like Hack The Box to build and refine my skills.
+    </p>
+  </div>
+  
+  <hr className={styles.separator} />
+
 </div>
-
-## Welcome
-
-This site is an archive of my Hack The Box writeups and cybersecurity notes.
-
-My primary focus is on penetration testing and vulnerability research, using platforms like Hack The Box to build and refine my skills. This site serves as my public archive, methodology, and personal cheatsheet.
-
-Use the sidebar to navigate all content.
