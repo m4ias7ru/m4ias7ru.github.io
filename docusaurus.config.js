@@ -121,8 +121,8 @@ const config = {
         copyright: `Copyright © ${new Date().getFullYear()} Marius-Alexandru Ulmeanu`,
       },
       prism: {
-        theme: prismThemes.vsDark,
-        darkTheme: prismThemes.vsDark,
+        theme: prismThemes.oneDark,
+        darkTheme: prismThemes.oneDark,
       },
     }),
 };
