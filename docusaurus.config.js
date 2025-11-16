@@ -46,6 +46,14 @@ const config = {
     locales: ['en'],
   },
 
+  // Added for Mermaid diagrams
+  themes: ['@docusaurus/theme-mermaid'],
+
+  // Added for Mermaid diagrams
+  markdown: {
+    mermaid: true,
+  },
+
   presets: [
     [
       'classic',
@@ -79,6 +87,11 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      // Added for Mermaid diagrams theme
+      mermaid: {
+        theme: {light: 'dark', dark: 'dark'},
+      },
+
       // Replace with your project's social card
       image: 'img/social-card.png',
       colorMode: {

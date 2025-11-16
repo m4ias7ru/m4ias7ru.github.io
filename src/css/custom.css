@@ -49,6 +49,20 @@
     background-color: rgba(255, 255, 255, 0.15) !important;
   }
 
+  /*
+    Global Horizontal Rule (---) Color Override
+  */
+  article hr {
+    background-color: #bdc1c8 !important; 
+
+    /* Force all lines to be this type (removes the other "gray" border-based line) */
+    border: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    height: 2px !important; /* Ensures the background-color is visible */
+    opacity: 1 !important; /* Ensures it's not transparent */
+  }
+
   /* Make all headers use the HTB green */
   h1,
   h2,
