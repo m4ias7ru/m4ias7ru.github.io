@@ -1,1 +1,0 @@
-"use strict";(globalThis.webpackChunkm_4_ias_7_ru=globalThis.webpackChunkm_4_ias_7_ru||[]).push([[325],{2325:(a,e,s)=>{s.d(e,{createPacketServices:()=>_.$});var _=s(1477);s(7960)}}]);
