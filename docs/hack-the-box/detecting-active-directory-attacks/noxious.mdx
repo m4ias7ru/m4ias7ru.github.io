@@ -1,0 +1,278 @@
+---
+title: Noxious
+sidebar_label: Noxious
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 6
+---
+
+<img
+  src="/img/noxious/noxious.png"
+  alt="Noxious"
+  style={{
+    display: 'block',
+    margin: '0 auto',
+    maxWidth: '280px', 
+    width: '80%',     
+    height: 'auto'
+  }}
+/>
+
+## Sherlock Scenario
+
+The IDS device alerted us to a possible rogue device in the internal Active Directory network. The Intrusion Detection System also indicated signs of **LLMNR (Link-Local Multicast Name Resolution) traffic**, which is unusual. It is suspected that an LLMNR poisoning attack occurred. The LLMNR traffic was directed towards `Forela-WKstn002`, which has the IP address `172.17.79.136`. A limited packet capture from the surrounding time is provided to you, our Network Forensics expert. Since this occurred in the Active Directory VLAN, it is suggested that we perform network threat hunting with the Active Directory attack vector in mind, specifically focusing on LLMNR poisoning.
+
+## Preparation
+
+Before diving into the packets, I defined the scope. I was looking for an **LLMNR poisoning event**. This typically occurs when a Windows machine fails to resolve a hostname via DNS and "falls back" to LLMNR to ask its neighbors for help. An attacker running a tool like **Responder** listens for these requests and spoof-responds, claiming to be the requested resource to trick the victim into sending an authentication hash.
+
+:::note What is a PCAP file?
+PCAP (Packet Capture) files contain the data of every communication sent over a network during the capture period. Analysts use these to reconstruct attacks, identify malicious IPs, and monitor network health.
+:::
+
+I loaded the provided `capture.pcap` file into **Wireshark** to begin my investigation.
+
+---
+
+## Task 1: Identifying the Malicious IP
+
+:::info Task Description
+Its suspected by the security team that there was a rogue device in Forela's internal network running responder tool to perform an LLMNR Poisoning attack. Please find the malicious IP Address of the machine.
+:::
+
+To find the attacker, I first needed to establish a baseline of "normal" behavior. In a Windows environment, the Domain Controller (DC) usually handles name resolution. If any other device starts answering name resolution queries for resources it doesn't own, it's a major red flag.
+
+I checked **Statistics > Endpoints** to see the most active internal IP addresses.
+
+![Endpoints](/img/noxious/endpoints.png)
+
+![Internal IPs](/img/noxious/interesting-internal.png)
+
+To perform a poisoning attack, the adversary must masquerade as a Domain Controller or a file server. My first move was to find the true DC IP so I could isolate the "imposter" traffic. I enabled the 3 options in **View > Name Resolution** to make the IP-to-hostname mapping clearer.
+
+![DC Enable Options](/img/noxious/dc-options.png)
+
+I filtered for `dns` because, in Active Directory environments, the Domain Controller usually acts as the DNS server.
+
+![Found DC](/img/noxious/found-dc.png)
+
+This revealed `dc01.forela.local` at `172.17.79.4`.
+
+Knowing the real DC, I turned my attention to the LLMNR traffic using the filter `udp.port == 5355`.
+
+![Task 1 Solution](/img/noxious/task1-solution.png)
+
+Legitimate traffic should go to the DC, but here I saw the victim (`172.17.79.136`) querying for a misspelled resource, `DCC01`. Instead of the DC responding with an error, the IP `172.17.79.135` stepped in and claimed to be that resource.
+
+This is classic LLMNR poisoning: the victim made a typo, and the attacker's machine lied to redirect the victim's authentication attempt to itself.
+
+:::success Task Answer
+172.17.79.135
+:::
+
+---
+
+## Task 2: Hunting the Hostname
+
+:::info Task Description
+What is the hostname of the rogue machine?
+:::
+
+Now that I had the attacker's IP, I needed more context on the device. Machines often reveal their hostnames when they request an IP address via **DHCP**.
+
+I filtered for `ip.addr == 172.17.79.135 and dhcp`.
+
+![Task 2 Solution](/img/noxious/task2-solution.png)
+
+Examining the **DHCP Request** packet, I found Option 12, which contains the Host Name.
+
+:::success Task Answer
+kali
+:::
+
+The attacker didn't even bother changing the default hostname of their attack OS.
+
+---
+
+## Task 3: Identifying the Victim
+
+:::info Task Description
+Now we need to confirm whether the attacker captured the user's hash and it is crackable!! What is the username whose hash was captured?
+:::
+
+When an LLMNR poisoning attack succeeds, the victim typically attempts to connect to the attacker's "fake" share, which triggers an NTLM authentication handshake over **SMB**.
+
+To find the username whose hash was captured, I filtered for SMB traffic using `smb2`. 
+
+![Task 3 Solution](/img/noxious/task3-solution.png)
+
+I saw `NTLMSSP_NEGOTIATE` and `NTLMSSP_AUTH` packets. The `NTLMSSP_AUTH` packet (packet `9292`) represents the final stage of the handshake where the victim sends their encrypted credentials to the server.
+
+:::success Task Answer
+john.deacon
+:::
+
+---
+
+## Task 4: The Timeline of the Attack
+
+:::info Task Description
+In NTLM traffic we can see that the victim credentials were relayed multiple times to the attacker's machine. When were the hashes captured the First time?
+:::
+
+Timing is critical for incident response. I standardized my view by setting the time format to **UTC Date and Time**.
+
+![Task 4 Part 1](/img/noxious/task4-1.png)
+
+Using the `ntlmssp` filter, I looked for the very first sequence of `NEGOTIATE`, `CHALLENGE`, and `AUTH` packets.
+
+![Task 4 Solution](/img/noxious/task4-solution.png)
+
+The first `NTLMSSP_AUTH` packet in the capture represents the exact moment the victim sent their hash to the attacker. 
+
+This happened at **2024-06-24 11:18:30**.
+
+:::success Task Answer
+2024-06-24 11:18:30
+:::
+
+---
+
+## Task 5: The Fatal Typo
+
+:::info Task Description
+What was the typo made by the victim when navigating to the file share that caused his credentials to be leaked?
+:::
+
+Windows only falls back to LLMNR when standard DNS resolution fails. This usually happens when a user mistypes a server name.
+
+![Task 5 Solution](/img/noxious/task5-solution.png)
+
+Looking back at the LLMNR queries (filter `llmnr`), I saw the victim machine (`172.17.79.136`) repeatedly asking "Who is `DCC01`?". Since the real Domain Controller is named `DC01`, it's clear the user added an extra 'C' by mistake while navigating to a file share.
+
+:::success Task Answer
+DCC01
+:::
+
+---
+
+## Task 6: Extracting the Server Challenge
+
+:::info Task Description
+To get the actual credentials of the victim user we need to stitch together multiple values from the ntlm negotiation packets. What is the NTLM server challenge value?
+:::
+
+When a client wants to authenticate using NTLM, the server sends it a challenge. This server challenge is a random 8-byte value sent to the client. The client uses this challenge and its password hash to create a response and sends that response back to the server. The server then sends the challenge and the client’s response to the domain controller. The domain controller, which knows the user’s password hash, recreates the response using the same challenge. If its result matches the client’s response, the client is authenticated.
+
+I again filtered the traffic to just the NTLM traffic with the `ntlmssp` display filter.
+
+The server’s challenge is found in the `STATUS_MORE_PROCESSING_REQUIRED` packet.
+
+![Task 6 Solution](/img/noxious/task6-solution.png)
+
+I navigated to packet number `9291` (`NTLMSSP_CHALLENGE`).
+
+I found the `NTLM Server Challenge` field in `SMB2 -> Session Setup Response -> Security Blob -> GSS-API -> Simple Protected Negotiation -> negTokenTarg -> NTLM Secure Service Provider`.
+
+:::success Task Answer
+601019d191f054f1
+:::
+
+---
+
+## Task 7: Finding the NTProofStr
+
+:::info Task Description
+Now doing something similar find the NTProofStr value.
+:::
+
+Next, I needed the `NTProofStr`, which is part of the client's response to the challenge.
+
+![Task 7 Solution](/img/noxious/task7-solution.png)
+
+I opened the `NTLMSSP_AUTH` packet (packet `9292`) and drilled down until I found the `NTProofStr` field under `SMB2 -> Session Setup Response -> Security Blob -> GSS-API -> Simple Protected Negotiation -> negTokenTarg -> NTLM Secure Service Provider -> NTLM Response -> NTLMv2 Response`.
+
+:::success Task Answer
+c0cc803a6d9fb5a9082253a04dbd4cd4
+:::
+
+---
+
+## Task 8: Cracking the Hash
+
+:::info Task Description
+To test the password complexity, try recovering the password from the information found from packet capture. This is a crucial step as this way we can find whether the attacker was able to crack this and how quickly.
+:::
+
+With all the pieces of the puzzle, I assembled the `Net-NTLMv2` hash in the following format:
+
+`USER::DOMAIN:SERVER_CHALLENGE:NTPROOFSTR:NTLMV2RESPONSE`
+
+I stripped the first 16 bytes (32 characters) from the `NTLMv2 Response` field, as these characters actually represent the `NTProofStr` we already have. 
+
+I then combined all the extracted pieces:
+
+`john.deacon::FORELA:601019d191f054f1:c0cc803a6d9fb5a9082253a04dbd4cd4:010100000000000080e4d59406c6da01cc3dcfc0de9b5f2600000000020008004e0042004600590001001e00570049004e002d00360036004100530035004c003100470052005700540004003400570049004e002d00360036004100530035004c00310047005200570054002e004e004200460059002e004c004f00430041004c00030014004e004200460059002e004c004f00430041004c00050014004e004200460059002e004c004f00430041004c000700080080e4d59406c6da0106000400020000000800300030000000000000000000000000200000eb2ecbc5200a40b89ad5831abf821f4f20a2c7f352283a35600377e1f294f1c90a001000000000000000000000000000000000000900140063006900660073002f00440043004300300031000000000000000000`
+
+I saved the hash to a file and cracked it with `hashcat`, using mode `5600` and the `rockyou.txt` wordlist.
+
+```plaintext {1,2}
+┌──(m4ias7ru㉿kali)-[~/Desktop/Noxious]                                                                  
+└─$ hashcat --force -m 5600 hash.txt /usr/share/wordlists/rockyou.txt                                 
+hashcat (v7.1.2) starting                           
+                                                    
+...
+
+JOHN.DEACON::FORELA:601019d191f054f1:c0cc803a6d9fb5a9082253a04dbd4cd4:010100000000000080e4d59406c6da01cc3dcfc0de9b5f2600000000020008004e0042004600590001001e00570049004e002d00360036004100530035004c00310047005200
+5700540004003400570049004e002d00360036004100530035004c00310047005200570054002e004e004200460059002e004c004f00430041004c00030014004e004200460059002e004c004f00430041004c00050014004e004200460059002e004c004f00430041
+004c000700080080e4d59406c6da0106000400020000000800300030000000000000000000000000200000eb2ecbc5200a40b89ad5831abf821f4f20a2c7f352283a35600377e1f294f1c90a0010000000000000000000000000000000000009001400630069006600
+73002f00440043004300300031000000000000000000:NotMyPassword0k?
+                                                          
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 5600 (NetNTLMv2)
+Hash.Target......: JOHN.DEACON::FORELA:601019d191f054f1:c0cc803a6d9fb5...000000
+Time.Started.....: Sun Jan  4 06:08:17 2026, (17 secs)
+Time.Estimated...: Sun Jan  4 06:08:34 2026, (0 secs)
+Kernel.Feature...: Pure Kernel (password length 0-256 bytes)
+Guess.Base.......: File (/usr/share/wordlists/rockyou.txt)
+Guess.Queue......: 1/1 (100.00%)
+Speed.#01........:   637.5 kH/s (2.26ms) @ Accel:1024 Loops:1 Thr:1 Vec:16
+Recovered........: 1/1 (100.00%) Digests (total), 1/1 (100.00%) Digests (new)
+Progress.........: 10780672/14344385 (75.16%)
+Rejected.........: 0/10780672 (0.00%)
+Restore.Point....: 10776576/14344385 (75.13%)
+Restore.Sub.#01..: Salt:0 Amplifier:0-1 Iteration:0-1
+Candidate.Engine.: Device Generator
+Candidates.#01...: Nov2599 -> NicoleBates3
+Hardware.Mon.#01.: Util: 59%
+
+Started: Sun Jan  4 06:07:42 2026
+Stopped: Sun Jan  4 06:08:35 2026
+```
+
+:::success Task Answer
+NotMyPassword0k?
+:::
+
+---
+
+## Task 9: The Intended Destination
+
+:::info Task Description
+Just to get more context surrounding the incident, what is the actual file share that the victim was trying to navigate to?
+:::
+
+Now, I wanted to see if the user ever made it to their destination after the typo. 
+
+I filtered for `smb2` and looked for `Tree Connect Request` packets that occurred after the attack.
+
+![Task 9 Solution](/img/noxious/task9-solution.png)
+
+After 48 seconds after the typo, I saw a successful connection to a legitimate share on the true DC (`172.17.79.4`).
+
+The victim eventually reached their destination, completely unaware that their session had been intercepted and their credentials stolen.
+
+:::success Task Answer
+\\\\DC01\DC-Confidential
+:::
