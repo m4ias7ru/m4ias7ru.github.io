@@ -1,0 +1,185 @@
+---
+title: CrownJewel-1
+sidebar_label: CrownJewel-1
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 6
+---
+
+<img
+  src="/img/crownjewel-1/crownjewel-1.png"
+  alt="Noxious"
+  style={{
+    display: 'block',
+    margin: '0 auto',
+    maxWidth: '280px', 
+    width: '80%',     
+    height: 'auto'
+  }}
+/>
+
+## Sherlock Scenario
+
+Forela's domain controller is under attack. The `Domain Administrator` account is believed to be compromised, and it is suspected that the threat actor dumped the `NTDS.dit` database on the DC. We just received an alert of `vssadmin` being used on the DC, since this is not part of the routine schedule we have good reason to believe that the attacker abused this `LOLBIN` utility to get the Domain environment's crown jewel. Perform some analysis on provided artifacts for a quick triage and if possible kick the attacker as early as possible.
+
+## Preparation
+
+I began by extracting the provided artifacts. The dataset included essential forensic files for timeline reconstruction:
+
+![Unzipped Archive evtx](/img/crownjewel-1/task1-archive-evtx.png)
+
+- **Event Logs**: `Microsoft-Windows-NTFS.evtx`, `SECURITY.evtx`, and `SYSTEM.evtx`.
+
+![Unzipped Archive mft](/img/crownjewel-1/task1-archive-mft.png)
+
+- **File System Metadata**: The Master File Table (`$MFT`)
+
+:::note What is MFT
+The `$MFT` is the heart of the NTFS file system. It acts as an index to all files and directories on the volume, providing metadata like file names, timestamps, and permissions.
+:::
+
+Here’s what the **MITRE ATT&CK Framework** has to say about the technique of dumping the `NTDS.dit` file ([T1003.003](https://attack.mitre.org/techniques/T1003/003/)):
+> Adversaries may attempt to access or create a copy of the Active Directory domain database in order to steal credential information, as well as obtain other information about domain members such as devices, users, and access rights. By default, the NTDS file (`NTDS.dit`) is located in `%SystemRoot%\NTDS\Ntds.dit` of a domain controller. <br /> <br />
+> In addition to looking for NTDS files on active Domain Controllers, adversaries may search for backups that contain the same or similar information. <br /> <br />
+> The following tools and techniques can be used to enumerate the NTDS file and the contents of the entire Active Directory hashes.
+> - Volume Shadow Copy
+> - secretsdump.py
+> - Using the in-built Windows tool, ntdsutil.exe
+> - Invoke-NinjaCopy
+
+---
+
+## Task 1: Tracking the Volume Shadow Copy Service
+
+:::info Task Description
+Attackers can abuse the vssadmin utility to create volume shadow snapshots and then extract sensitive files like `NTDS.dit` to bypass security mechanisms. Identify the time when the Volume Shadow Copy service entered a running state.
+:::
+
+I focused on the **System Event Log** and filtered for **Event ID 7036**, which logs service state changes.
+
+![Task 1 Filtering for EventID 7036](/img/crownjewel-1/task1-filter-eventid7036.png)
+
+I then used the "Find" action to search for the "Shadow" keyword.
+
+![Task 1 Find Shadow Keyword](/img/crownjewel-1/task1-find-shadow.png)
+
+Went into **Details -> XML View**
+
+![Task 1 Answer](/img/crownjewel-1/task1-answer.png)
+
+And found my answer under **System -> TimeCreated SystemTime**
+
+:::success Task Answer
+2024-05-14 03:42:16
+:::
+
+---
+
+## Task 2: Identifying the Actor and Privilege Checks
+
+:::info Task Description
+When a volume shadow snapshot is created, the Volume shadow copy service validates the privileges using the Machine account and enumerates User groups. Find the two user groups the volume shadow copy process queries and the machine account that did it.
+:::
+
+I pivoted to the **Security Event Log** and filtered for **Event ID 4799** (Security-enabled local group membership enumeration). I specifically looked for activity involving `VSSVC.exe` around the time the service started.
+
+![Task 2 Part 1](/img/crownjewel-1/task2-part1.png)
+
+![Task 2 Part 2](/img/crownjewel-1/task2-part2.png)
+
+The logs confirmed that the `DC01$` machine account performed the enumeration. The process queried two specific groups to ensure it had the rights to snapshot the drive: `Administrators` and `Backup Operators`.
+
+:::success Task Answer
+Administrators, Backup Operators, DC01$
+:::
+
+---
+
+## Task 3: Mapping the PID
+
+:::info Task Description
+Identify the Process ID (in Decimal) of the volume shadow copy service process.
+:::
+
+I saw the PID in the same set of security events. 
+
+![Task 3 Answer](/img/crownjewel-1/task3-answer.png)
+
+The log recorded the PID in hexadecimal as `0x1190`. Converting it to decimal results in `4496`.
+
+:::success Task Answer
+4496
+:::
+
+---
+
+## Task 4: Extracting the Volume GUID
+
+:::info Task Description
+Find the assigned Volume ID/GUID value to the Shadow copy snapshot when it was mounted.
+:::
+
+Once the snapshot is created, it is assigned a unique Volume ID/GUID when mounted. I analyzed the **Microsoft-Windows-NTFS** logs, looking for events that happened after the timestamp of group enumeration and identified the Volume Correlation ID for the shadow copy.
+
+![Task 4 Answer](/img/crownjewel-1/task4-answer.png)
+
+:::success Task Answer
+\{06c4a997-cca8-11ed-a90f-000c295644f9\}
+:::
+
+---
+
+## Task 5: Hunting for the NTDS.dit Dump
+
+:::info Task Description
+Identify the full path of the dumped NTDS database on disk.
+:::
+
+To find exactly where the attacker exfiltrated the "crown jewel," I parsed the `$MFT` file using [MFTECmd.exe](https://github.com/EricZimmerman/MFTECmd)
+
+![Task 5 MFTECmd](/img/crownjewel-1/task5-mftecmd.png)
+
+And then opened the parsed CSV file in [Timeline Explorer](https://www.sans.org/tools/timeline-explorer) and searched for "`NTDS.dit`". 
+
+![Task 5 Answer](/img/crownjewel-1/task5-mftecmd-filter-ntds.png)
+
+
+While standard paths like `\Windows\NTDS` were present, one location stood out as highly suspicious.
+
+:::success Task Answer
+C:\Users\Administrator\Documents\backup_sync_dc\Ntds.dit
+:::
+
+---
+
+## Task 6: NTDS.dit Creation Timestamp
+
+:::info Task Description
+When was newly dumped ntds.dit created on disk?
+:::
+
+Using the MFT analysis from the previous task, I looked for the exact creation time (Created0x10) of the newly dumped file.
+
+![Task 6 Answer](/img/crownjewel-1/task6-answer.png)
+
+:::success Task Answer
+2024-05-14 03:44:22
+:::
+
+---
+
+## Task 7: The Missing Link: The SYSTEM Hive
+
+:::info Task Description
+A registry hive was also dumped alongside the NTDS database. Which registry hive was dumped and what is its file size in bytes?
+:::
+
+An `NTDS.dit` file is unusable without the `SYSTEM` registry hive, which contains the boot key needed to decrypt the database hashes. I searched the MFT results for the suspicious `backup_sync_dc` parent path to see what else was staged in that directory.
+
+![Task 7 Answer](/img/crownjewel-1/task7-answer.png)
+
+There it is, I found the `SYSTEM` hive sitting right next to the database.
+
+:::success Task Answer
+SYSTEM, 17563648
+:::
