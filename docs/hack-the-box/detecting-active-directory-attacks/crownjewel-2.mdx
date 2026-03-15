@@ -1,0 +1,175 @@
+---
+title: CrownJewel-2
+sidebar_label: CrownJewel-2
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 6
+---
+
+<img
+  src="/img/crownjewel-2/crownjewel-2.png"
+  alt="Noxious"
+  style={{
+    display: 'block',
+    margin: '0 auto',
+    maxWidth: '280px', 
+    width: '80%',     
+    height: 'auto'
+  }}
+/>
+
+## Sherlock Scenario
+
+Forela's Domain environment is pure chaos. Just got another alert from the Domain controller of `NTDS.dit` database being exfiltrated. Just one day prior you responded to an alert on the same domain controller where an attacker dumped `NTDS.dit` via `vssadmin` utility. However, you managed to delete the dumped files kick the attacker out of the DC, and restore a clean snapshot. Now they again managed to access DC with a domain admin account with their persistent access in the environment. This time they are abusing `ntdsutil` to dump the database. Help Forela in these chaotic times!!
+
+## Preparation
+
+I was provided a `CrownJewel2.zip` archive, which contained an `Artifacts` directory with `APPLICATION.evtx`, `SECURITY.evtx` and `SYSTEM.evtx` event logs from the compromised Domain Controller. My primary tools for this analysis were the Event Viewer and standard filtering techniques to isolate the attacker's activity within the noise.
+
+![Sherlock Resources](/img/crownjewel-2/resources.png)
+
+:::note What is NTDS.dit?
+The `NTDS.dit` file is the heart of Active Directory. It stores all domain usernames, password hashes, and other critical schema information. Exfiltrating this file allows an attacker to perform offline cracking of every account in the domain. The SYSTEM registry hive contains the boot key needed to decrypt the database hashes.
+:::
+
+---
+
+## Task 1: Tracking the Shadow Copy Service
+
+:::info Task Description
+When utilizing ntdsutil.exe to dump NTDS on disk, it simultaneously employs the Microsoft Shadow Copy Service. What is the most recent timestamp at which this service entered the running state, signifying the possible initiation of the NTDS dumping process?
+:::
+
+I began by analyzing the **System Event Log** to pinpoint when the attack started. I knew that `ntdsutil`, like many backup tools, relies on the **Volume Shadow Copy Service** to create a snapshot of the active database file because the system locks the live `NTDS.dit` file.
+
+I filtered for **Event ID 7036**, which logs service state changes.
+
+![Filter for 7086](/img/crownjewel-2/task1-part1.png)
+
+Then used the "Find" feature to search for the "Shadow" keyword and found a total of 4 Shadow Copy service entered running state events
+
+![Task 1 Answer](/img/crownjewel-2/task1-answer.png)
+
+The event showed here is the most recent one. Expanding the details to view the XML gave me the precise UTC timestamp of when the service spun up.
+
+:::success Task Answer
+2024-05-15 05:39:55
+:::
+
+---
+
+## Task 2: Locating the Dumped Database
+
+:::info Task Description
+Identify the full path of the dumped NTDS file.
+:::
+
+Once the shadow copy service is active, the database engine creates a new copy of the `NTDS.dit` file. This activity is logged in the **Application Event Log** by the **ESENT** source, which handles the Extensible Storage Engine.
+
+I filtered for **Event ID 325**, which indicates that the database engine has created a new database. This is an important artifact because it reveals exactly where the attacker is staging the stolen data before exfiltration.
+
+![Task 2 Event ID 325](/img/crownjewel-2/task2-event325.png)
+
+The path revealed that the attacker was using a temporary directory to hide their tracks.
+
+:::success Task Answer
+C:\Windows\Temp\dump_tmp\Active Directory\ntds.dit
+:::
+
+---
+
+## Task 3: The Creation Timestamp
+
+:::info Task Description
+When was the database dump created on the disk?
+:::
+
+Using the same **Event ID 325** entry identified in the previous task, I extracted the exact creation timestamp. This confirms precisely when the file hit the disk.
+
+![Task 3 Event Details](/img/crownjewel-2/task3-timestamp.png)
+
+:::success Task Answer
+2024-05-15 05:39:56
+:::
+
+---
+
+## Task 4: Confirming the Dump Completion
+
+:::info Task Description
+When was the newly dumped database considered complete and ready for use?
+:::
+
+Creation is one thing; completion is another. A file might be created but still be locked or incomplete. I needed to know when the database was fully detached and marked "ready." For this, I stayed in the **Application Event Log** but switched my filter to **Event ID 327**.
+
+This event confirms that the database engine has successfully detached the database, making it a valid, consistent file ready for the attacker to steal.
+
+![Task 4 Event ID 327](/img/crownjewel-2/task4-event327.png)
+
+I found two events with this ID, both occurring just two seconds after the file creation.
+
+:::success Task Answer
+2024-05-15 05:39:58
+:::
+
+---
+
+## Task 5: Identifying the Event Source
+
+:::info Task Description
+Event logs use event sources to track events coming from different sources. Which event source provides database status data like creation and detachment?
+:::
+
+Throughout my analysis of the database dumping process (Tasks 2, 3, and 4), I consistently relied on events from a specific source in the Application log. Identifying the correct source is vital for building accurate detection rules in a SIEM.
+
+![Task 5 Source Identification](/img/crownjewel-2/task5-source.png)
+
+The "Source" column in the Event Viewer clearly identified the provider as the database engine itself.
+
+:::success Task Answer
+ESENT
+:::
+
+---
+
+## Task 6: The Privilege Check
+
+:::info Task Description
+When ntdsutil.exe is used to dump the database, it enumerates certain user groups to validate the privileges of the account being used. Which two groups are enumerated by the ntdsutil.exe process? Give the groups in alphabetical order joined by comma space.
+:::
+
+To understand *who* was running the tool and *what* permissions they were checking, I pivoted to the **Security Event Log**. I filtered for **Event ID 4799**, which logs the enumeration of security-enabled local groups. This is often a noisy event that attackers trigger when tools automatically check if they have the rights to proceed.
+
+I searched specifically for events where the "Process Name" was `C:\Windows\System32\ntdsutil.exe`.
+
+![Task 6 Event ID 4799](/img/crownjewel-2/task6-event4799-p1.png)
+
+![Task 6 Event ID 4799](/img/crownjewel-2/task6-event4799-p2.png)
+
+The logs revealed that the process checked membership for two critical groups: **Administrators** and **Backup Operators**. This validation is standard behavior for `ntdsutil` to ensure it has sufficient rights to perform the backup.
+
+The event also provided the **Logon ID** (`0x8DE3D`). This ID acts as a session identifier, allowing me to isolate the attacker's specific login session from legitimate traffic.
+
+:::success Task Answer
+Administrators, Backup Operators
+:::
+
+---
+
+## Task 7: Pinpointing the Intrusion Time
+
+:::info Task Description
+Now you are tasked to find the Login Time for the malicious Session. Using the Logon ID, find the Time when the user logon session started.
+:::
+
+Armed with the **Logon ID** (`0x8DE3D`) from the previous task, I could now backtrack to find when this specific session began. I filtered the **Security Event Log** for Kerberos authentication events (**Event ID 4768** and **4769**) and Special Logon events (**Event ID 5379**).
+
+My goal was to find the start of the chain. I looked for the sequence where the `Administrator` account requested a TGT (Ticket Granting Ticket). Correlating the Logon ID found in **Event ID 5379** (Credential Manager read) with the timestamps of the Kerberos activity, I pinpointed the exact moment the session was established.
+
+![Task 7 Logon Timeline](/img/crownjewel-2/task7-timeline.png)
+
+The logs showed the Kerberos authentication and subsequent credential access happening at the same second. This timestamp marks the beginning of the malicious session that led to the database dump.
+
+:::success Task Answer
+2024-05-15 05:36:31
+:::
